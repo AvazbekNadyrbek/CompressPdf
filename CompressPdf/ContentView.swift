@@ -7,30 +7,28 @@
 
 import SwiftUI
 
-import SwiftUI
-
 struct ContentView: View {
-    
+
     @State private var viewModel = CompressViewModel()
-    
+
     var body: some View {
         switch viewModel.viewState {
         case .idle:
             HomeView(viewModel: viewModel)
-            
+
         case .loading(let progress):
             ProcessingView(
                 fileName: viewModel.selectedFileName,
                 fileSize: viewModel.selectedFileSize,
                 progress: progress
             )
-            
+
         case .result(let result):
             ResultView(
                 result: result,
                 onReset: { viewModel.reset() }
             )
-            
+
         case .error(let message):
             ErrorView(message: message) {
                 viewModel.reset()

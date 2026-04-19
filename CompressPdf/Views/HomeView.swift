@@ -8,42 +8,33 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-
 struct HomeView: View {
-    
+
     @Bindable var viewModel: CompressViewModel
     @State private var isPickerShown = false
-    
+
     var body: some View {
         ZStack {
-            // Фон
             Color(hex: "0A0A0F").ignoresSafeArea()
-            
-            // Градиентные пятна
             backgroundGlow
-            
+
             VStack(spacing: 0) {
-                // Заголовок
                 header
                     .padding(.top, 20)
-                
+
                 Spacer()
-                
-                // Зона загрузки
+
                 dropZone
-                
+
                 Spacer()
-                
-                // Выбор качества
+
                 qualityPicker
                     .padding(.bottom, 24)
-                
-                // Кнопка
+
                 compressButton
                     .padding(.bottom, 8)
-                
-                // Бесплатный лимит
-                Text("3 файла бесплатно в день")
+
+                Text("3 free files per day")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.25))
                     .padding(.bottom, 32)
@@ -59,9 +50,9 @@ struct HomeView: View {
             }
         }
     }
-    
+
     // MARK: - Subviews
-    
+
     private var backgroundGlow: some View {
         ZStack {
             Circle()
@@ -69,7 +60,7 @@ struct HomeView: View {
                 .frame(width: 400)
                 .blur(radius: 80)
                 .offset(x: -60, y: -200)
-            
+
             Circle()
                 .fill(Color(hex: "ec4899").opacity(0.08))
                 .frame(width: 300)
@@ -77,7 +68,7 @@ struct HomeView: View {
                 .offset(x: 80, y: 200)
         }
     }
-    
+
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 6) {
@@ -91,36 +82,41 @@ struct HomeView: View {
                             )
                         )
                         .frame(width: 32, height: 32)
-                        .overlay(Text("📄").font(.system(size: 16)))
-                    
+                        .overlay {
+                            Text("📄")
+                                .font(.system(size: 16))
+                                .accessibilityHidden(true)
+                        }
+
                     Text("PDF SQUEEZE")
                         .font(.caption)
-                        .fontWeight(.semibold)
+                        .bold()
                         .tracking(2)
                         .foregroundStyle(.white.opacity(0.4))
                 }
-                
-                Text("Сожми PDF\nв секунду")
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(.white)
-                    .lineSpacing(2)
-                    .overlay(
-                        LinearGradient(
-                            colors: [Color(hex: "6366f1"), Color(hex: "ec4899")],
-                            startPoint: .leading,
-                            endPoint: .trailing
+
+                // Split into two Text views so the gradient applies directly —
+                // avoids the fragile .mask + offset(y:) approach.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Compress PDF")
+                        .font(.largeTitle).bold()
+                        .foregroundStyle(.white)
+
+                    Text("in seconds")
+                        .font(.largeTitle).bold()
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "6366f1"), Color(hex: "ec4899")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                        .mask(
-                            Text("в секунду")
-                                .font(.system(size: 30, weight: .bold))
-                                .offset(y: 38)
-                        )
-                    )
+                }
             }
             Spacer()
         }
     }
-    
+
     private var dropZone: some View {
         Button {
             isPickerShown = true
@@ -138,20 +134,21 @@ struct HomeView: View {
                         )
                     )
                     .frame(width: 68, height: 68)
-                    .overlay(
+                    .overlay {
                         Text(viewModel.selectedFileURL == nil ? "📎" : "📄")
                             .font(.system(size: 30))
-                    )
-                    .overlay(
+                            .accessibilityHidden(true)
+                    }
+                    .overlay {
                         RoundedRectangle(cornerRadius: 20)
                             .stroke(Color(hex: "6366f1").opacity(0.3), lineWidth: 1)
-                    )
-                
+                    }
+
                 if viewModel.selectedFileURL == nil {
-                    Text("Выбрать PDF")
+                    Text("Select PDF")
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Text("из Files, iCloud, WhatsApp")
+                    Text("from Files, iCloud, WhatsApp")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.35))
                 } else {
@@ -170,25 +167,30 @@ struct HomeView: View {
             .frame(maxWidth: .infinity)
             .frame(height: 180)
             .background(Color(hex: "6366f1").opacity(0.04))
-            .clipShape(RoundedRectangle(cornerRadius: 28))
-            .overlay(
+            .clipShape(.rect(cornerRadius: 28))
+            .overlay {
                 RoundedRectangle(cornerRadius: 28)
                     .strokeBorder(
                         style: StrokeStyle(lineWidth: 1.5, dash: [8])
                     )
                     .foregroundStyle(Color(hex: "6366f1").opacity(0.4))
-            )
+            }
         }
+        .accessibilityLabel(
+            viewModel.selectedFileURL == nil
+            ? "Select a PDF file"
+            : "Selected file: \(viewModel.selectedFileName). Tap to change"
+        )
     }
-    
+
     private var qualityPicker: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("УРОВЕНЬ СЖАТИЯ")
+            Text("COMPRESSION LEVEL")
                 .font(.caption)
-                .fontWeight(.semibold)
+                .bold()
                 .tracking(1.5)
                 .foregroundStyle(.white.opacity(0.4))
-            
+
             HStack(spacing: 8) {
                 ForEach(Quality.allCases, id: \.self) { q in
                     Button {
@@ -197,8 +199,9 @@ struct HomeView: View {
                         VStack(spacing: 6) {
                             Text(q.icon)
                                 .font(.title2)
+                                .accessibilityHidden(true)
                             Text(q.label)
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.caption).bold()
                                 .foregroundStyle(
                                     viewModel.selectedQuality == q
                                     ? .white
@@ -223,8 +226,8 @@ struct HomeView: View {
                                 endPoint: .bottom
                             )
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(
+                        .clipShape(.rect(cornerRadius: 16))
+                        .overlay {
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(
                                     viewModel.selectedQuality == q
@@ -232,18 +235,20 @@ struct HomeView: View {
                                     : Color.white.opacity(0.06),
                                     lineWidth: 1
                                 )
-                        )
+                        }
                     }
+                    .accessibilityLabel(q.label)
+                    .accessibilityAddTraits(viewModel.selectedQuality == q ? [.isSelected] : [])
                 }
             }
         }
     }
-    
+
     private var compressButton: some View {
         Button {
             Task { await viewModel.compress() }
         } label: {
-            Text("Сжать PDF →")
+            Text("Compress PDF →")
                 .font(.headline)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -255,7 +260,7 @@ struct HomeView: View {
                         endPoint: .trailing
                     )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .clipShape(.rect(cornerRadius: 20))
                 .shadow(color: Color(hex: "6366f1").opacity(0.35), radius: 16, y: 8)
         }
         .disabled(viewModel.selectedFileURL == nil)

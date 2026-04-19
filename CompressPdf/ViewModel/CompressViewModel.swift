@@ -8,82 +8,84 @@
 import SwiftUI
 import Observation
 
-
 @Observable
+@MainActor
 class CompressViewModel {
-    
-    // MARK: -State
-    
+
+    // MARK: - State
+
     enum ViewState {
         case idle
         case loading(Double)
         case result(CompressResult)
         case error(String)
     }
-    
+
     var viewState: ViewState = .idle
     var selectedQuality: Quality = .balance
     var selectedFileURL: URL?
     var selectedFileName: String = ""
     var selectedFileSize: Int = 0
-    
-    
+
+    private var selectedFileData: Data?
     private let service = PDFCompressService()
-    
+
     // MARK: - Выбрал файл
+
     func didSelectFile(url: URL) {
         guard url.startAccessingSecurityScopedResource() else { return }
         defer { url.stopAccessingSecurityScopedResource() }
-        
+
         selectedFileURL = url
         selectedFileName = url.lastPathComponent
-        
-        // Размер файла
+
         if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
            let size = attrs[.size] as? Int {
             selectedFileSize = size
         }
+
+        // Read while the security scope is still open — it closes on defer above
+        selectedFileData = try? Data(contentsOf: url)
     }
-    
+
     // MARK: - Сжать
+
     func compress() async {
-        guard let url = selectedFileURL else { return }
-        
-        // Симулируем прогресс пока сервер работает
-        await startProgressAnimation()
-        
+        guard let data = selectedFileData else {
+            viewState = .error(CompressError.invalidFile.localizedDescription)
+            return
+        }
+        viewState = .loading(0.0)
+
+        // Start network call and progress animation concurrently
+        async let networkResult = service.compress(pdfData: data, quality: selectedQuality)
+
+        for progress in stride(from: 0.05, through: 0.85, by: 0.05) {
+            do {
+                try await Task.sleep(for: .milliseconds(150))
+            } catch {
+                break
+            }
+            guard case .loading = viewState else { break }
+            viewState = .loading(progress)
+        }
+
         do {
-            let result = try await service.compress(
-                pdfURL: url,
-                quality: selectedQuality
-            )
-            await MainActor.run {
-                viewState = .result(result)
-            }
+            viewState = .result(try await networkResult)
+        } catch is CancellationError {
+            viewState = .idle
         } catch {
-            await MainActor.run {
-                viewState = .error(error.localizedDescription)
-            }
+            viewState = .error(error.localizedDescription)
         }
     }
+
     // MARK: - Сброс
+
     func reset() {
         viewState = .idle
         selectedFileURL = nil
         selectedFileName = ""
         selectedFileSize = 0
-    }
-    
-    // MARK: - Прогресс анимация
-    private func startProgressAnimation() async {
-        await MainActor.run { viewState = .loading(0.0) }
-        
-        // Плавно до 85% пока ждём сервер
-        for i in stride(from: 0.0, to: 0.85, by: 0.05) {
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            await MainActor.run {
-                viewState = .loading(i)
-            }
-        }
+        selectedFileData = nil
     }
 }

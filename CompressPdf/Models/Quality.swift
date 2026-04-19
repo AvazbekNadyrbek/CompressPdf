@@ -15,9 +15,9 @@ enum Quality: String, CaseIterable {
     
     var label: String {
         switch self {
-        case .max: return "Максимум"
-        case .balance: return "Баланс"
-        case .high: return "Качество"
+        case .max: return "Maximum"
+        case .balance: return "Balanced"
+        case .high: return "Quality"
         }
     }
     
